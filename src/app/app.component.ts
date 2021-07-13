@@ -63,42 +63,43 @@ export class AppComponent implements AfterViewInit {
       distinctUntilChanged() // 当数据(方向)改变时，数据才往下流
     );
 
-    const length$ = new BehaviorSubject<number>(SNAKE_LENGTH);
+    const length$ = new BehaviorSubject<number>(SNAKE_LENGTH);//记录长度
 
+    // 蛇的长度
     const snakeLength$ = length$.pipe(
       scan((step, snakeLength) => snakeLength + step),
       share()
     );
-
+    //分数
     const score$ = snakeLength$.pipe(
       startWith(0),
       scan((score, _) => score + POINTS_PER_APPLE)
     );
-
+    //记录蛇的坐标
     const snake$ = interval(200).pipe(
       withLatestFrom<number, Observable<Point2D>, Observable<number>, [Point2D, number]>
       (direction$, snakeLength$, (_, direction, snakeLength) => [direction, snakeLength,]),
       scan(move, generateSnake()),
       share()
     );
-
+    // 记录苹果的坐标
     const apples$ = snake$.pipe(
       scan(eat, generateApples()),
       distinctUntilChanged(),
       share()
     );
-
+    // 苹果被吃掉的流
     apples$
       .pipe(
         skip(1),
-        tap(() => length$.next(POINTS_PER_APPLE))
+        tap(() => length$.next(POINTS_PER_APPLE)) // 吃掉一个苹果，蛇要增加相应的长度
       )
       .subscribe();
-
-
+    // 场景，包括蛇，苹果，分数
     const scene$ = combineLatest([snake$, apples$, score$]).pipe(
       map(([snake, apples, score]) => ({snake, apples, score}))
     );
+
     return fps$.pipe(
       withLatestFrom(scene$, (_, scene) => scene)
     );
